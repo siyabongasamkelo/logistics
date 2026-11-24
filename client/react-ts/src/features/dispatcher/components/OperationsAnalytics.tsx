@@ -1,7 +1,19 @@
-import React from "react";
+import React, { useState } from "react";
 import { useDispatcher } from "../context/DispatcherContext";
+import type { FuelLog } from "../types/dispatcher.types";
 import { AnalyticsKPIs } from "./AnalyticsKPIs";
 import { GigsLedgerTable } from "./GigsLedgerTable";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface OperationsAnalyticsProps {
   onBackToLive: () => void;
@@ -10,12 +22,33 @@ interface OperationsAnalyticsProps {
 export const OperationsAnalytics: React.FC<OperationsAnalyticsProps> = ({
   onBackToLive,
 }) => {
-  const { jobs, vehicles, fuelLogs, flaggedFuelCount } = useDispatcher();
+  const {
+    jobs,
+    vehicles,
+    fuelLogs,
+    flaggedFuelCount,
+    isDispatching,
+    resolveFuelFlag,
+  } = useDispatcher();
+
+  const [resolvingLog, setResolvingLog] = useState<FuelLog | null>(null);
+  const [resolutionNote, setResolutionNote] = useState("");
 
   const totalGrossRevenue = jobs.reduce((sum, job) => sum + job.clientPrice, 0);
   const totalActualFuel = fuelLogs.reduce((sum, log) => sum + log.cost, 0);
   const netProfit = totalGrossRevenue - totalActualFuel;
   const completedCount = jobs.filter((j) => j.status === "DELIVERED").length;
+
+  const handleConfirmResolve = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resolvingLog || !resolutionNote.trim()) return;
+
+    const ok = await resolveFuelFlag(resolvingLog._id, resolutionNote);
+    if (ok) {
+      setResolvingLog(null);
+      setResolutionNote("");
+    }
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-10">
@@ -85,9 +118,31 @@ export const OperationsAnalytics: React.FC<OperationsAnalyticsProps> = ({
                     </td>
                     <td className="px-5 py-4">
                       {log.isFlagged ? (
-                        <span className="inline-flex rounded-md bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-700 border border-rose-200">
-                          ⚠ {log.flagReason}
-                        </span>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="inline-flex rounded-md bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-700 border border-rose-200">
+                            ⚠ {log.flagReason}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setResolvingLog(log);
+                              setResolutionNote("");
+                            }}
+                            className="h-7 border-slate-300 px-2.5 text-[11px] font-semibold hover:bg-slate-900 hover:text-white"
+                          >
+                            Resolve
+                          </Button>
+                        </div>
+                      ) : log.resolutionNote ? (
+                        <div className="space-y-1">
+                          <span className="inline-flex rounded-md bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 border border-amber-200">
+                            ✓ Reviewed & Cleared
+                          </span>
+                          <p className="text-[11px] text-slate-500">
+                            Note: {log.resolutionNote}
+                          </p>
+                        </div>
                       ) : (
                         <span className="inline-flex rounded-md bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
                           ✓ Verified Normal
@@ -101,6 +156,58 @@ export const OperationsAnalytics: React.FC<OperationsAnalyticsProps> = ({
           </table>
         </div>
       </section>
+
+      {/* RESOLUTION DIALOG */}
+      <Dialog
+        open={!!resolvingLog}
+        onOpenChange={(open) => !open && setResolvingLog(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base">
+              Resolve Fuel Consumption Alert
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              {resolvingLog?.flagReason}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleConfirmResolve} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="resolutionNote" className="text-xs">
+                Driver Explanation / Office Review Outcome
+              </Label>
+              <Input
+                id="resolutionNote"
+                placeholder="e.g. Spoke to Bongani — 3hr delay idling at Harbour gate"
+                value={resolutionNote}
+                onChange={(e) => setResolutionNote(e.target.value)}
+                className="text-xs"
+                required
+              />
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setResolvingLog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isDispatching || !resolutionNote.trim()}
+                className="bg-slate-900 text-white hover:bg-slate-800"
+              >
+                {isDispatching ? "Saving..." : "Save & Clear Alert"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

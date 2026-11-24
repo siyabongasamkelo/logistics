@@ -26,10 +26,19 @@ interface DispatcherContextType {
   isLoading: boolean;
   isDispatching: boolean;
   error: string | null;
+  resolveFuelFlag: (
+    fuelLogId: string,
+    resolutionNote: string,
+  ) => Promise<boolean>;
   dispatchJob: (jobId: string, vehicleId: string) => Promise<boolean>;
   updateStatus: (
     jobId: string,
     status: DeliveryJob["status"],
+    podNote?: string,
+  ) => Promise<boolean>;
+  toggleVehicleStatus: (
+    vehicleId: string,
+    status: "READY" | "MAINTENANCE",
   ) => Promise<boolean>;
   submitFuelLog: (payload: LogFuelPayload) => Promise<boolean>;
   refreshBoard: () => Promise<void>;
@@ -103,15 +112,19 @@ export const DispatcherProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // In DispatcherContextType interface:
+
+  // Inside DispatcherProvider:
   const updateStatus = async (
     jobId: string,
     status: DeliveryJob["status"],
+    podNote?: string,
   ): Promise<boolean> => {
     try {
       setIsDispatching(true);
       setError(null);
       const { job: updatedJob, vehicle: updatedVehicle } =
-        await dispatcherService.updateJobStatus(jobId, status);
+        await dispatcherService.updateJobStatus(jobId, status, podNote);
       setJobs((prev) =>
         prev.map((j) => (j._id === updatedJob._id ? updatedJob : j)),
       );
@@ -180,6 +193,54 @@ export const DispatcherProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const resolveFuelFlag = async (
+    fuelLogId: string,
+    resolutionNote: string,
+  ): Promise<boolean> => {
+    try {
+      setIsDispatching(true);
+      setError(null);
+      const updatedLog = await dispatcherService.resolveFuelAlert(
+        fuelLogId,
+        resolutionNote,
+      );
+      setFuelLogs((prev) =>
+        prev.map((log) => (log._id === updatedLog._id ? updatedLog : log)),
+      );
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resolve alert");
+      return false;
+    } finally {
+      setIsDispatching(false);
+    }
+  };
+
+  const toggleVehicleStatus = async (
+    vehicleId: string,
+    status: "READY" | "MAINTENANCE",
+  ): Promise<boolean> => {
+    try {
+      setIsDispatching(true);
+      setError(null);
+      const updatedVehicle = await dispatcherService.updateVehicleStatus(
+        vehicleId,
+        status,
+      );
+      setVehicles((prev) =>
+        prev.map((v) => (v._id === updatedVehicle._id ? updatedVehicle : v)),
+      );
+      return true;
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Vehicle status update failed",
+      );
+      return false;
+    } finally {
+      setIsDispatching(false);
+    }
+  };
+
   const availableVehicles = vehicles.filter((v) => v.status === "READY");
   const availableJobs = jobs.filter((j) => j.status === "PENDING");
   const activeMissions = jobs.filter(
@@ -206,6 +267,8 @@ export const DispatcherProvider: React.FC<{ children: React.ReactNode }> = ({
         refreshBoard,
         addJob,
         addVehicle,
+        resolveFuelFlag,
+        toggleVehicleStatus,
       }}
     >
       {children}

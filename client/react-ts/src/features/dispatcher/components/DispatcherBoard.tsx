@@ -7,6 +7,7 @@ import { MissionDrawer } from "./MissionDrawer";
 import { CreateJobModal } from "./CreateJobModal";
 import { AddVehicleModal } from "./AddVehicleModal";
 import { OperationsAnalytics } from "./OperationsAnalytics";
+import { DriverDashboard } from "@/features/driver/components/DriverDashboard";
 
 export const DispatcherBoard: React.FC = () => {
   const {
@@ -24,14 +25,15 @@ export const DispatcherBoard: React.FC = () => {
     submitFuelLog,
     addJob,
     addVehicle,
+    toggleVehicleStatus,
   } = useDispatcher();
 
   const [selectedJob, setSelectedJob] = useState<DeliveryJob | null>(null);
   const [inspectingMission, setInspectingMission] =
     useState<DeliveryJob | null>(null);
-  const [activeRole, setActiveRole] = useState<"OWNER" | "DISPATCHER">(
-    "DISPATCHER",
-  );
+  const [activeRole, setActiveRole] = useState<
+    "OWNER" | "DISPATCHER" | "DRIVER"
+  >("DISPATCHER");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isNewMenuOpen, setIsNewMenuOpen] = useState(false);
   const [isAddVehicleOpen, setIsAddVehicleOpen] = useState(false);
@@ -61,7 +63,9 @@ export const DispatcherBoard: React.FC = () => {
         setActiveView={setActiveView}
       />
 
-      {activeView === "ANALYTICS" ? (
+      {activeRole === "DRIVER" ? (
+        <DriverDashboard onExitDriverView={() => setActiveRole("DISPATCHER")} />
+      ) : activeView === "ANALYTICS" ? (
         <OperationsAnalytics onBackToLive={() => setActiveView("LIVE")} />
       ) : (
         <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-10">
@@ -275,6 +279,9 @@ export const DispatcherBoard: React.FC = () => {
                       ? "bg-indigo-50 text-indigo-700 border-indigo-200/80"
                       : "bg-rose-50 text-rose-700 border-rose-200/80";
 
+                const nextStatus =
+                  vehicle.status === "READY" ? "MAINTENANCE" : "READY";
+
                 return (
                   <div
                     key={vehicle._id}
@@ -294,11 +301,28 @@ export const DispatcherBoard: React.FC = () => {
                         {vehicle.capacityKg.toLocaleString()}kg
                       </p>
                     </div>
-                    <span
-                      className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full border ${badgeStyle}`}
-                    >
-                      {vehicle.status.replace("_", " ")}
-                    </span>
+
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <span
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${badgeStyle}`}
+                      >
+                        {vehicle.status.replace("_", " ")}
+                      </span>
+
+                      {vehicle.status !== "ON_TRIP" && (
+                        <button
+                          disabled={isDispatching}
+                          onClick={() =>
+                            toggleVehicleStatus(vehicle._id, nextStatus)
+                          }
+                          className="text-[11px] font-semibold text-slate-500 hover:text-slate-900 underline underline-offset-2 disabled:opacity-50 transition"
+                        >
+                          {vehicle.status === "READY"
+                            ? "Send to Service"
+                            : "Mark Ready"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}

@@ -1,8 +1,8 @@
 import React from "react";
 
 interface NavbarProps {
-  activeRole: "OWNER" | "DISPATCHER";
-  setActiveRole: (role: "OWNER" | "DISPATCHER") => void;
+  activeRole: "OWNER" | "DISPATCHER" | "DRIVER";
+  setActiveRole: (role: "OWNER" | "DISPATCHER" | "DRIVER") => void;
   activeView: "LIVE" | "ANALYTICS";
   setActiveView: (view: "LIVE" | "ANALYTICS") => void;
 }
@@ -54,6 +54,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               Owner View
+            </button>
+            <button
+              onClick={() => setActiveRole("DRIVER")}
+              className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                activeRole === "DRIVER"
+                  ? "bg-white text-indigo-600 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Driver View
             </button>
           </div>
 

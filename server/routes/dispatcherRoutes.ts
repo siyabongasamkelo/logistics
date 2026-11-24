@@ -8,6 +8,8 @@ import {
   updateJobStatus,
   getFuelLogs,
   logFuelExpense,
+  resolveFuelAlert,
+  updateVehicleStatus,
 } from "../controllers/dispatcherController";
 
 const router = Router();
@@ -22,5 +24,7 @@ router.patch("/jobs/:id/status", updateJobStatus);
 
 router.get("/fuel-logs", getFuelLogs);
 router.post("/fuel-logs", logFuelExpense);
+router.patch("/fuel-logs/:id/resolve", resolveFuelAlert);
+router.patch("/vehicles/:id/status", updateVehicleStatus);
 
 export default router;

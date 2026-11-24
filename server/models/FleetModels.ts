@@ -21,6 +21,8 @@ export interface IJob extends Document {
   estimatedFuelCost: number;
   status: "PENDING" | "ASSIGNED" | "IN_TRANSIT" | "DELIVERED";
   assignedVehicleId?: mongoose.Types.ObjectId;
+  podNote?: string;
+  deliveredAt?: Date;
 }
 
 export interface IFuelLog extends Document {
@@ -32,6 +34,8 @@ export interface IFuelLog extends Document {
   receiptNote: string;
   isFlagged: boolean;
   flagReason?: string;
+  resolutionNote?: string;
+  resolvedAt?: Date;
 }
 
 const VehicleSchema = new Schema<IVehicle>(
@@ -70,6 +74,8 @@ const JobSchema = new Schema<IJob>(
       default: "PENDING",
     },
     assignedVehicleId: { type: Schema.Types.ObjectId, ref: "Vehicle" },
+    podNote: { type: String },
+    deliveredAt: { type: Date },
   },
   { timestamps: true },
 );
@@ -84,6 +90,8 @@ const FuelLogSchema = new Schema<IFuelLog>(
     receiptNote: { type: String, default: "Mobile Camera Slip" },
     isFlagged: { type: Boolean, default: false },
     flagReason: { type: String },
+    resolutionNote: { type: String },
+    resolvedAt: { type: Date },
   },
   { timestamps: true },
 );

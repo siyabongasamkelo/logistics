@@ -99,8 +99,9 @@ export const updateJobStatus = async (
 ): Promise<void> => {
   try {
     const id = String(req.params.id);
-    const { status } = req.body as {
+    const { status, podNote } = req.body as {
       status: "PENDING" | "ASSIGNED" | "IN_TRANSIT" | "DELIVERED";
+      podNote?: string;
     };
 
     const job = await Job.findById(id);
@@ -110,16 +111,22 @@ export const updateJobStatus = async (
     }
 
     job.status = status;
-    await job.save();
 
     let updatedVehicle = undefined;
-    if (status === "DELIVERED" && job.assignedVehicleId) {
-      updatedVehicle = await Vehicle.findByIdAndUpdate(
-        job.assignedVehicleId,
-        { status: "READY" },
-        { new: true },
-      );
+    if (status === "DELIVERED") {
+      job.podNote = podNote?.trim() || "Signed at Dropoff Gate";
+      job.deliveredAt = new Date();
+
+      if (job.assignedVehicleId) {
+        updatedVehicle = await Vehicle.findByIdAndUpdate(
+          job.assignedVehicleId,
+          { status: "READY" },
+          { new: true },
+        );
+      }
     }
+
+    await job.save();
 
     res.json({ job, vehicle: updatedVehicle });
   } catch (err) {
@@ -199,5 +206,76 @@ export const logFuelExpense = async (
     res.status(201).json({ fuelLog, vehicle });
   } catch (err) {
     res.status(500).json({ message: "Failed to log fuel expense", err });
+  }
+};
+
+// PATCH /api/dispatcher/fuel-logs/:id/resolve
+export const resolveFuelAlert = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const id = String(req.params.id);
+    const { resolutionNote } = req.body as { resolutionNote: string };
+
+    if (!resolutionNote || !resolutionNote.trim()) {
+      res.status(400).json({ message: "Please provide a resolution note" });
+      return;
+    }
+
+    const fuelLog = await FuelLog.findByIdAndUpdate(
+      id,
+      {
+        isFlagged: false,
+        resolutionNote: resolutionNote.trim(),
+        resolvedAt: new Date(),
+      },
+      { new: true },
+    );
+
+    if (!fuelLog) {
+      res.status(404).json({ message: "Fuel log not found" });
+      return;
+    }
+
+    res.json(fuelLog);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to resolve fuel alert", err });
+  }
+};
+
+// PATCH /api/dispatcher/vehicles/:id/status
+export const updateVehicleStatus = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const id = String(req.params.id);
+    const { status } = req.body as { status: "READY" | "MAINTENANCE" };
+
+    if (status !== "READY" && status !== "MAINTENANCE") {
+      res.status(400).json({ message: "Status must be READY or MAINTENANCE" });
+      return;
+    }
+
+    const vehicle = await Vehicle.findById(id);
+    if (!vehicle) {
+      res.status(404).json({ message: "Vehicle not found" });
+      return;
+    }
+
+    if (vehicle.status === "ON_TRIP") {
+      res.status(400).json({
+        message: "Cannot change status while vehicle is currently on a trip",
+      });
+      return;
+    }
+
+    vehicle.status = status;
+    await vehicle.save();
+
+    res.json(vehicle);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update vehicle status", err });
   }
 };

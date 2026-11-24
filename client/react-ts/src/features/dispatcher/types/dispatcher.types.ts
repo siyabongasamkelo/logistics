@@ -24,6 +24,8 @@ export interface DeliveryJob {
   estimatedFuelCost: number;
   status: JobStatus;
   assignedVehicleId?: string;
+  podNote?: string;
+  deliveredAt?: string;
 }
 
 export interface DispatchPayload {
@@ -41,6 +43,8 @@ export interface FuelLog {
   receiptNote: string;
   isFlagged: boolean;
   flagReason?: string;
+  resolutionNote?: string;
+  resolvedAt?: string;
   createdAt: string;
 }
 

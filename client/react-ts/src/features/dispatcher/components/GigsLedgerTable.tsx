@@ -109,6 +109,26 @@ export const GigsLedgerTable: React.FC<GigsLedgerTableProps> = ({
                       {job.status.replace("_", " ")}
                     </span>
                   </td>
+                  <td className="px-5 py-4">
+                    <div className="space-y-1">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                          job.status === "DELIVERED"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : job.status === "PENDING"
+                              ? "bg-amber-50 text-amber-700"
+                              : "bg-indigo-50 text-indigo-700"
+                        }`}
+                      >
+                        {job.status.replace("_", " ")}
+                      </span>
+                      {job.status === "DELIVERED" && job.podNote && (
+                        <p className="text-[11px] text-slate-500">
+                          POD: {job.podNote}
+                        </p>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               );
             })}
